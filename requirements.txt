@@ -1,0 +1,7 @@
+# 전용 가상환경(.venv)에 설치. pandas는 pykrx/parquet 호환을 위해 2.2.x 고정.
+pandas==2.2.3
+requests
+pyarrow
+finance-datareader
+pykrx
+matplotlib

@@ -1,0 +1,5 @@
+# GitHub Actions(Pages 빌드) 전용 의존성 — pykrx/FDR 불필요(시총은 marcap)
+pandas==2.2.3
+requests
+pyarrow
+matplotlib
