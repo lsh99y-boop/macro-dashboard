@@ -27,12 +27,24 @@ import macro_fetch as F
 import macro_indicators as I
 
 # ─── 한글 폰트 ─────────────────────────────────────────────────────
-for _f in ["Malgun Gothic", "맑은 고딕", "NanumGothic", "AppleGothic"]:
-    try:
-        plt.rcParams["font.family"] = _f
-        break
-    except Exception:  # noqa: BLE001
-        continue
+# 실제 설치된 폰트 중에서 선택 (리눅스 CI는 나눔/Noto, 윈도우는 맑은 고딕).
+import matplotlib.font_manager as _fm
+
+
+def _set_korean_font():
+    candidates = ["Malgun Gothic", "맑은 고딕", "NanumGothic", "NanumBarunGothic",
+                  "Noto Sans CJK KR", "Noto Sans KR", "AppleGothic", "UnDotum"]
+    available = {f.name for f in _fm.fontManager.ttflist}
+    for name in candidates:
+        if name in available:
+            plt.rcParams["font.family"] = name
+            return name
+    return None
+
+
+_kfont = _set_korean_font()
+if not _kfont:
+    print("[경고] 한글 폰트를 찾지 못했습니다 — 차트 한글이 깨질 수 있습니다.")
 plt.rcParams["axes.unicode_minus"] = False
 
 INK = "#1a2332"; MUTED = "#5b6b7f"; GRID = "#e3e8ef"
