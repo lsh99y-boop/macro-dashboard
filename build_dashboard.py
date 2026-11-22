@@ -21,6 +21,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import numpy as np
+import pandas as pd
 
 import config as C
 import macro_fetch as F
@@ -97,6 +98,26 @@ def chart_ratio(rr: I.RatioResult) -> str:
     return _b64(fig)
 
 
+def _cycle_projection(s: pd.Series, H: int = 12, w: int = 5):
+    """과거 정점 이후 '평균 경로'를 현재값에 붙여 미래 H개월 전망(평균·범위)."""
+    v = s.values
+    peaks = [i for i in range(w, len(v) - w) if v[i] == v[i - w:i + w + 1].max() and i + H < len(v)]
+    ded = []                                   # 인접 정점 중복 제거(더 높은 쪽)
+    for p in peaks:
+        if ded and p - ded[-1] <= w:
+            if v[p] >= v[ded[-1]]:
+                ded[-1] = p
+        else:
+            ded.append(p)
+    if len(ded) < 3:
+        return None
+    paths = np.array([[v[p + h] - v[p] for h in range(H + 1)] for p in ded])
+    avg, lo, hi = paths.mean(0), paths.min(0), paths.max(0)
+    fut = pd.date_range(s.index[-1], periods=H + 1, freq="ME")   # h=0 = 현재
+    last = float(s.iloc[-1])
+    return fut, last + avg, last + lo, last + hi
+
+
 def chart_cycle(cr: I.CycleResult) -> str:
     fig, ax = plt.subplots(figsize=(9, 4.2))
     s = cr.series
@@ -116,13 +137,23 @@ def chart_cycle(cr: I.CycleResult) -> str:
                 color=BLUE, fontsize=10, fontweight="bold")
     ax.annotate(f"평균 대비 {(s.iloc[-1] - m) / sd:+.1f}σ", (s.index[-1], s.iloc[-1]),
                 textcoords="offset points", xytext=(-6, -13), ha="right", color=MUTED, fontsize=8)
+    # 미래 전망: 과거 정점 이후 '평균 경로'를 현재값에 투영 (점선 + 범위 밴드)
+    proj = _cycle_projection(s)
+    if proj:
+        fx, pm, plo, phi = proj
+        ax.fill_between(fx, plo, phi, color=ACCENT, alpha=0.10, zorder=1)
+        ax.plot(fx, pm, color=ACCENT, lw=1.5, ls="--", zorder=6)
+        ax.axvline(s.index[-1], color=MUTED, lw=0.7, ls=":")
+        ax.annotate(f"전망 {pm[-1]:.1f}\n(정점 후 평균경로)", (fx[-1], pm[-1]),
+                    textcoords="offset points", xytext=(4, -4), ha="left",
+                    color=ACCENT, fontsize=7.5, fontweight="bold")
     if cr.latest["peak_flag"] and cr.latest["recent_peak_date"] is not None:
         pk = cr.latest["recent_peak_date"]
         ax.scatter([pk], [s.loc[pk]], color=RED, zorder=7, s=45, marker="v")
         ax.annotate(f"정점 유력\n({pk:%Y-%m})", (pk, s.loc[pk]),
                     textcoords="offset points", xytext=(6, 6), ha="left",
                     color=RED, fontsize=8, fontweight="bold")
-    ax.set_title("② 선행지수 순환변동치 (100=추세 · 점선=평균±1·2σ)", fontsize=12, color=INK, fontweight="bold", loc="left")
+    ax.set_title("② 선행지수 순환변동치 (평균±σ 밴드 · 우측 점선=미래 전망)", fontsize=12, color=INK, fontweight="bold", loc="left")
     ax.grid(True, color=GRID, lw=0.6)
     ax.xaxis.set_major_locator(mdates.YearLocator(2))
     ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
@@ -237,7 +268,9 @@ border-radius:10px;padding:14px 16px;margin-top:8px}}
 ② M2 분모가 꾸준히 커져 비율의 장기평균선 자체가 우상향하므로, 단순 "평균회귀" 단정은 위험합니다 →
 '추세보정 Z'(5년 롤링 기준)를 함께 보세요. ③ 정점/저점은 사후에만 확정됩니다
 ('{CY['consec_down']}개월 연속 하락=정점 유력'은 규칙 기반 잠정 판정).
-④ 이 지표는 <b>중장기 국면 배경 필터</b>이지 단타 신호가 아닙니다 — 타이밍은 파동/피보나치 레이어가 담당.
+④ ②번 차트의 <b>우측 점선 '전망'은 과거 정점 이후 평균 경로를 현재값에 붙인 시나리오</b>일 뿐,
+예측이 아닙니다(밴드=과거 정점들의 최소~최대 범위). ⑤ 이 지표는 <b>중장기 국면 배경 필터</b>이지
+단타 신호가 아닙니다 — 타이밍은 파동/피보나치 레이어가 담당.
 </div>
 </div></body></html>"""
 
