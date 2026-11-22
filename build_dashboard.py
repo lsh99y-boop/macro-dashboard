@@ -101,20 +101,28 @@ def chart_cycle(cr: I.CycleResult) -> str:
     fig, ax = plt.subplots(figsize=(9, 4.2))
     s = cr.series
     ax.plot(s.index, s.values, color=GREEN, lw=1.6, zorder=5)
+    m, sd = float(s.mean()), float(s.std())        # 역대 평균·표준편차
     ax.axhline(100, color=MUTED, lw=1, ls="--")
+    for k, cc in ((1, AMBER), (2, RED)):           # +1σ·+2σ 밴드
+        ax.axhline(m + k * sd, color=cc, lw=0.8, ls=":")
+        ax.text(s.index[0], m + k * sd, f" +{k}σ {m + k * sd:.1f}", va="bottom", ha="left", color=cc, fontsize=7)
+    ax.axhline(m - sd, color=MUTED, lw=0.7, ls=":")
+    ax.text(s.index[0], m, f" 평균 {m:.1f}", va="bottom", ha="left", color=MUTED, fontsize=7)
     ax.fill_between(s.index, 100, s.values, where=(s.values >= 100), color=GREEN, alpha=0.08)
     ax.fill_between(s.index, 100, s.values, where=(s.values < 100), color=RED, alpha=0.08)
     ax.scatter([s.index[-1]], [s.iloc[-1]], color=BLUE, zorder=6, s=40)
     ax.annotate(f"{s.iloc[-1]:.1f}", (s.index[-1], s.iloc[-1]),
                 textcoords="offset points", xytext=(-6, 8), ha="right",
                 color=BLUE, fontsize=10, fontweight="bold")
+    ax.annotate(f"평균 대비 {(s.iloc[-1] - m) / sd:+.1f}σ", (s.index[-1], s.iloc[-1]),
+                textcoords="offset points", xytext=(-6, -13), ha="right", color=MUTED, fontsize=8)
     if cr.latest["peak_flag"] and cr.latest["recent_peak_date"] is not None:
         pk = cr.latest["recent_peak_date"]
         ax.scatter([pk], [s.loc[pk]], color=RED, zorder=7, s=45, marker="v")
         ax.annotate(f"정점 유력\n({pk:%Y-%m})", (pk, s.loc[pk]),
                     textcoords="offset points", xytext=(6, 6), ha="left",
                     color=RED, fontsize=8, fontweight="bold")
-    ax.set_title("② 선행지수 순환변동치 (100=장기추세)", fontsize=12, color=INK, fontweight="bold", loc="left")
+    ax.set_title("② 선행지수 순환변동치 (100=추세 · 점선=평균±1·2σ)", fontsize=12, color=INK, fontweight="bold", loc="left")
     ax.grid(True, color=GRID, lw=0.6)
     ax.xaxis.set_major_locator(mdates.YearLocator(2))
     ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
