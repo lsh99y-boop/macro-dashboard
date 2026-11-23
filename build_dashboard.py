@@ -132,7 +132,7 @@ def chart_cycle(cr: I.CycleResult) -> str:
     ax.fill_between(s.index, 100, s.values, where=(s.values >= 100), color=GREEN, alpha=0.08)
     ax.fill_between(s.index, 100, s.values, where=(s.values < 100), color=RED, alpha=0.08)
     ax.scatter([s.index[-1]], [s.iloc[-1]], color=BLUE, zorder=6, s=40)
-    ax.annotate(f"{s.iloc[-1]:.1f}", (s.index[-1], s.iloc[-1]),
+    ax.annotate(f"{s.iloc[-1]:.1f} ({s.index[-1]:%Y-%m})", (s.index[-1], s.iloc[-1]),
                 textcoords="offset points", xytext=(-6, 8), ha="right",
                 color=BLUE, fontsize=10, fontweight="bold")
     ax.annotate(f"평균 대비 {(s.iloc[-1] - m) / sd:+.1f}σ", (s.index[-1], s.iloc[-1]),
